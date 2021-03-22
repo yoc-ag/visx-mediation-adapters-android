@@ -6,14 +6,17 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.util.Size;
 
+import com.appnexus.opensdk.AdView;
+import com.appnexus.opensdk.TargetingParameters;
 import com.google.android.gms.ads.mediation.MediationAdRequest;
 import com.google.android.gms.ads.mediation.VersionInfo;
 import com.google.android.gms.ads.mediation.customevent.CustomEventBannerListener;
 import com.google.android.gms.ads.mediation.customevent.CustomEventInterstitialListener;
+import com.yoc.visx.sdk.BuildConfig;
 import com.yoc.visx.sdk.VisxAdManager;
 import com.yoc.visx.sdk.util.AdSize;
 import com.yoc.visx.sdk.util.PlacementType;
-import com.yoc.visx.sdk.BuildConfig;
+import com.yoc.visx.sdk.util.VISXLog;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -125,7 +128,7 @@ final class MediationUtil {
      * @return AdSize
      * @see AdSize object, ready for setting as adSize inside the
      * @see VisxAdManager.Builder#adSize(AdSize)
-     *
+     * <p>
      * First thing is splitting the 'size' value from the paramsMap by "x", then initiate a new AdSize, with given Size and INLINE PlacementType
      * If SIZE_KEY is null, we will fallback to a 320x50 banner
      * @see MediationUtil#setParameterMap(String)
@@ -151,7 +154,7 @@ final class MediationUtil {
      * @return AdSize
      * @see AdSize object, ready for setting as adSize inside the
      * @see VisxAdManager.Builder#adSize(AdSize)
-     *
+     * <p>
      * First thing is splitting the 'size' value from the paramsMap by "x", then initiate a new AdSize, with given Size and INTERSTITIAL PlacementType
      * If SIZE_KEY is null, we will fallback to a 320x480 interstitial
      * @see MediationUtil#setParameterMap(String)
@@ -170,4 +173,78 @@ final class MediationUtil {
         return visxAdSize;
     }
 
+    /**
+     * XANDR Mapping TargetingParameters to our CustomTargetingParameters HashMap
+     *
+     * @param targetingParameters - values from Xandr
+     * @return customTargetingParams
+     * @see VisxAdManager.Builder#customTargetParams(HashMap)
+     */
+    static HashMap<String, String> getCustomTargetingParamsXandr(TargetingParameters targetingParameters) {
+        final HashMap<String, String> customTargetingParams = new HashMap<>();
+
+        if (targetingParameters != null) {
+
+            if (targetingParameters.getCustomKeywords() != null && !targetingParameters.getCustomKeywords().isEmpty()) {
+                for (int i = 0; i < targetingParameters.getCustomKeywords().size(); i++) {
+                    String key = targetingParameters.getCustomKeywords().get(i).first;
+                    String value = targetingParameters.getCustomKeywords().get(i).second;
+                    customTargetingParams.put(key, value);
+                }
+            } else {
+                VISXLog.w("Mediation from Xandr - TargetingParams is NULL or EMPTY");
+            }
+
+            if (!TextUtils.isEmpty(targetingParameters.getAge())) {
+                customTargetingParams.put("age", targetingParameters.getAge());
+            } else {
+                VISXLog.w("Mediation from Xandr - Age is NULL or EMPTY");
+            }
+
+            if (targetingParameters.getGender() != null) {
+                if (targetingParameters.getGender() == AdView.GENDER.MALE) {
+                    customTargetingParams.put("gender", "male");
+                } else if (targetingParameters.getGender() == AdView.GENDER.FEMALE) {
+                    customTargetingParams.put("gender", "female");
+                } else if ((targetingParameters.getGender() == AdView.GENDER.UNKNOWN)) {
+                    customTargetingParams.put("gender", "unknown");
+                }
+            } else {
+                VISXLog.w("Mediation from Xandr - Gender is NULL or EMPTY");
+            }
+
+
+            if (!TextUtils.isEmpty(targetingParameters.getExternalUid())) {
+                customTargetingParams.put("externalUid", targetingParameters.getExternalUid());
+            } else {
+                VISXLog.w("Mediation from Xandr - ExternalUid is NULL or EMPTY");
+            }
+
+            if (targetingParameters.getLocation() != null) {
+                customTargetingParams.put("lat", String.valueOf(targetingParameters.getLocation().getLatitude()));
+                customTargetingParams.put("lon", String.valueOf(targetingParameters.getLocation().getLongitude()));
+            } else {
+                VISXLog.w("Mediation from Xandr - Location is NULL");
+            }
+        } else {
+            VISXLog.w("TargetingParameters from Xandr is NULL");
+        }
+
+        return customTargetingParams;
+    }
+
+    /**
+     * Smart Ad Server Mapping TargetingParameters Map to our CustomTargetingParameters HashMap
+     *
+     * @param clientParameters - Map with String key and String value
+     * @return - HashMap resembling SDK type for customTargetingParameters
+     */
+    static HashMap<String, String> getTargetingParamsFromSmartAdServerMap(Map<String, String> clientParameters) {
+        HashMap<String, String> customTargetParam = new HashMap<>();
+        if (clientParameters instanceof HashMap<?, ?>) {
+            customTargetParam = (HashMap<String, String>) clientParameters;
+        }
+        return customTargetParam;
+    }
 }
+
