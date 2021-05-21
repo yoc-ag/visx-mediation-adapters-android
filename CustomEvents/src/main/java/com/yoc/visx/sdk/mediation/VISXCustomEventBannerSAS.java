@@ -3,6 +3,7 @@ package com.yoc.visx.sdk.mediation;
 import android.app.Activity;
 import android.content.Context;
 import android.util.Log;
+import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.Keep;
@@ -54,10 +55,7 @@ public class VISXCustomEventBannerSAS implements SASMediationBannerAdapter {
                     @Override
                     public void onAdResponseReceived(VisxAdManager visxAdManager, String message) {
                         Log.i(TEST_TAG, "VISXCustomEventBannerSAS onAdResponseReceived(): " + message);
-                        if (visxAdManager.getVisxAdViewContainer().getParent() != null) {
-                            ((ViewGroup) (visxAdManager.getVisxAdViewContainer().getParent())).removeView(visxAdManager.getVisxAdViewContainer());
-                        }
-                        bannerAdapterListener.onBannerLoaded(visxAdManager.getVisxAdViewContainer());
+                        bannerAdapterListener.onBannerLoaded(visxAdManager.getAdContainer());
                     }
 
                     @Override
@@ -66,7 +64,8 @@ public class VISXCustomEventBannerSAS implements SASMediationBannerAdapter {
                     }
 
                     @Override
-                    public void onAdLoadingFinished(VisxAdManager visxAdManager, String message) {
+                    public void onAdLoadingFinished(final VisxAdManager visxAdManager, String message) {
+                        updateAdContainerSize(visxAdManager);
                         Log.i(TEST_TAG, "VISXCustomEventBannerSAS onAdLoadingFinished()");
                     }
 
@@ -100,6 +99,24 @@ public class VISXCustomEventBannerSAS implements SASMediationBannerAdapter {
                 })
                 .build();
     }
+
+    private void updateAdContainerSize(VisxAdManager visxAdManager) {
+        if (visxAdManager != null &&
+                visxAdManager.getAdContainer() != null && // VisxAdContainer
+                visxAdManager.getAdContainer().getParent() != null && // RelativeLayout in SmartAd view hierarchy
+                visxAdManager.getAdContainer().getParent().getParent() != null && // SASBannerView
+                visxAdManager.getAdContainer().getParent().getParent().getParent() != null // Container for holding the SmartAd with fixed sizes
+        ) {
+            View smartAdContainer = (View) visxAdManager.getAdContainer().getParent().getParent().getParent();
+            ViewGroup.LayoutParams layoutParams = smartAdContainer.getLayoutParams();
+            if (layoutParams != null) {
+                layoutParams.width = ViewGroup.LayoutParams.WRAP_CONTENT;
+                layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT;
+                smartAdContainer.setLayoutParams(layoutParams);
+            }
+        }
+    }
+
 
     @Override
     public void onDestroy() {

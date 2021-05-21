@@ -87,10 +87,7 @@ public class VISXCustomEventBannerXandr implements MediatedBannerAdView {
                     }
                 })
                 .build();
-        if (visxAdManager.getVisxAdViewContainer().getParent() != null) {
-            ((ViewGroup) visxAdManager.getVisxAdViewContainer().getParent()).removeView(visxAdManager.getVisxAdViewContainer());
-        }
-        return visxAdManager.getVisxAdViewContainer();
+        return visxAdManager.getAdContainer();
     }
 
     @Override

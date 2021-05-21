@@ -9,11 +9,15 @@ import com.huawei.hms.ads.banner.BannerView;
 import com.yoc.visx.sdk.adapter.VisxMediationAdapter;
 import com.yoc.visx.sdk.mediation.VISXMediationEventListener;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
 
 public class VISXBannerHAD implements VisxMediationAdapter {
-    private static final int WIDTH_ARRAY_ELEMENT = 0;
-    private static final int HEIGHT_ARRAY_ELEMENT = 1;
+
+    private static final String AD_UNIT = "adunit";
+    private static final String AD_SIZES = "sizes";
 
     private BannerView bannerView;
 
@@ -22,10 +26,10 @@ public class VISXBannerHAD implements VisxMediationAdapter {
     }
 
     @Override
-    public void loadAd(String adUnitID, Context context, VISXMediationEventListener eventListener, List<int[]> adSizes) {
+    public void loadAd(Map<String, String> parametersMap, Context context, VISXMediationEventListener eventListener) {
         bannerView = new BannerView(context);
-        bannerView.setAdId(adUnitID);
-        bannerView.setBannerAdSize(getAdSizes(adSizes)[0]);
+        bannerView.setAdId(parametersMap.get(AD_UNIT));
+        bannerView.setBannerAdSize(getSizes(parametersMap.get(AD_SIZES))[0]);
         bannerView.setAdListener(new AdListener() {
             @Override
             public void onAdFailed(int errorCode) {
@@ -92,12 +96,21 @@ public class VISXBannerHAD implements VisxMediationAdapter {
         }
     }
 
-    private BannerAdSize[] getAdSizes(List<int[]> adSizes) {
-        BannerAdSize[] adSizesList = new BannerAdSize[adSizes.size()];
-        for (int i = 0; i < adSizes.size(); i++) {
-            int width = adSizes.get(i)[WIDTH_ARRAY_ELEMENT];
-            int height = adSizes.get(i)[HEIGHT_ARRAY_ELEMENT];
-            adSizesList[i] = new BannerAdSize(width, height);
+    private BannerAdSize[] getSizes(String sizes) {
+        String sizesTrimmed = sizes.replaceAll("[\\[ \\] ,]", " ");
+
+        List<Integer> sizeList = new ArrayList<>();
+
+        Scanner scanner = new Scanner(sizesTrimmed);
+        while (scanner.hasNextInt()) {
+            sizeList.add(scanner.nextInt());
+        }
+
+        BannerAdSize[] adSizesList = new BannerAdSize[sizeList.size() / 2];
+        int position = 0;
+        for (int i = 0; i < sizeList.size(); i += 2) {
+            adSizesList[position] = new BannerAdSize(sizeList.get(i), sizeList.get(i + 1));
+            position++;
         }
         return adSizesList;
     }

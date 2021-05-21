@@ -2,33 +2,39 @@ package com.yoc.visx.sdk.adapter.googleads;
 
 import android.content.Context;
 
+import androidx.annotation.NonNull;
+
 import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdSize;
-import com.google.android.gms.ads.doubleclick.PublisherAdRequest;
-import com.google.android.gms.ads.doubleclick.PublisherAdView;
-import com.yoc.visx.sdk.mediation.VISXMediationEventListener;
+import com.google.android.gms.ads.LoadAdError;
+import com.google.android.gms.ads.admanager.AdManagerAdRequest;
+import com.google.android.gms.ads.admanager.AdManagerAdView;
 import com.yoc.visx.sdk.adapter.VisxMediationAdapter;
+import com.yoc.visx.sdk.mediation.VISXMediationEventListener;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
 
 public class VISXBannerGAD implements VisxMediationAdapter {
 
-    private static final int WIDTH_ARRAY_ELEMENT = 0;
-    private static final int HEIGHT_ARRAY_ELEMENT = 1;
+    private static final String AD_UNIT = "adunit";
+    private static final String AD_SIZES = "sizes";
 
-    private PublisherAdView adView;
+    private AdManagerAdView adView;
 
     public VISXBannerGAD() {
     }
 
     @Override
-    public void loadAd(final String adUnitID, final Context context,
-                       final VISXMediationEventListener eventListener, final List<int[]> adSizes) {
+    public void loadAd(final Map<String, String> parametersMap, final Context context,
+                       final VISXMediationEventListener eventListener) {
 
-        adView = new PublisherAdView(context);
-        adView.setAdUnitId(adUnitID);
-        adView.setAdSizes(getAdSizes(adSizes));
+        adView = new AdManagerAdView(context);
+        adView.setAdUnitId(parametersMap.get(AD_UNIT));
+        adView.setAdSizes(getSizes(parametersMap.get(AD_SIZES)));
 
         adView.setAdListener(new AdListener() {
             @Override
@@ -36,13 +42,13 @@ public class VISXBannerGAD implements VisxMediationAdapter {
             }
 
             @Override
-            public void onAdFailedToLoad(int errorCode) {
-                if (errorCode == AdRequest.ERROR_CODE_NO_FILL) {
+            public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
+                if (loadAdError.getCode() == AdRequest.ERROR_CODE_NO_FILL) {
                     eventListener.initNextMediationAdapter();
                     return;
                 }
                 String errorCodeMessage = "";
-                switch (errorCode) {
+                switch (loadAdError.getCode()) {
                     case AdRequest.ERROR_CODE_INTERNAL_ERROR:
                         errorCodeMessage = "ERROR_CODE_INTERNAL_ERROR";
                         break;
@@ -60,11 +66,6 @@ public class VISXBannerGAD implements VisxMediationAdapter {
             }
 
             @Override
-            public void onAdLeftApplication() {
-                eventListener.onAdLeftApplication();
-            }
-
-            @Override
             public void onAdLoaded() {
                 eventListener.onAdLoaded();
                 // Add the adView to the VisxAdViewContainer
@@ -77,13 +78,13 @@ public class VISXBannerGAD implements VisxMediationAdapter {
         });
 
         // Request and load an Ad
-        final PublisherAdRequest adRequest = new PublisherAdRequest.Builder().build();
+        final AdManagerAdRequest adRequest = new AdManagerAdRequest.Builder().build();
         adView.loadAd(adRequest);
     }
 
     @Override
     public void show() {
-        // method used for interstital
+        // method used for interstitial
     }
 
     @Override
@@ -92,12 +93,21 @@ public class VISXBannerGAD implements VisxMediationAdapter {
         adView.destroy();
     }
 
-    private AdSize[] getAdSizes(List<int[]> adSizes) {
-        AdSize[] adSizesList = new AdSize[adSizes.size()];
-        for (int i = 0; i < adSizes.size(); i++) {
-            int width = adSizes.get(i)[WIDTH_ARRAY_ELEMENT];
-            int height = adSizes.get(i)[HEIGHT_ARRAY_ELEMENT];
-            adSizesList[i] = new AdSize(width, height);
+    private AdSize[] getSizes(String sizes) {
+        String sizesTrimmed = sizes.replaceAll("[\\[ \\] ,]", " ");
+
+        List<Integer> sizeList = new ArrayList<>();
+
+        Scanner scanner = new Scanner(sizesTrimmed);
+        while (scanner.hasNextInt()) {
+            sizeList.add(scanner.nextInt());
+        }
+
+        AdSize[] adSizesList = new AdSize[sizeList.size() / 2];
+        int position = 0;
+        for (int i = 0; i < sizeList.size(); i += 2) {
+            adSizesList[position] = new AdSize(sizeList.get(i), sizeList.get(i + 1));
+            position++;
         }
         return adSizesList;
     }
