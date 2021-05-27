@@ -1,40 +1,55 @@
 package com.yoc.visx.sdk.adapter.googleads;
 
+import android.app.Activity;
 import android.content.Context;
 
-import com.google.android.gms.ads.AdListener;
-import com.google.android.gms.ads.AdRequest;
-import com.google.android.gms.ads.doubleclick.PublisherAdRequest;
-import com.google.android.gms.ads.doubleclick.PublisherInterstitialAd;
-import com.yoc.visx.sdk.mediation.VISXMediationEventListener;
-import com.yoc.visx.sdk.adapter.VisxMediationAdapter;
+import androidx.annotation.NonNull;
 
-import java.util.List;
+import com.google.android.gms.ads.AdError;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.FullScreenContentCallback;
+import com.google.android.gms.ads.LoadAdError;
+import com.google.android.gms.ads.admanager.AdManagerAdRequest;
+import com.google.android.gms.ads.admanager.AdManagerInterstitialAd;
+import com.google.android.gms.ads.admanager.AdManagerInterstitialAdLoadCallback;
+import com.yoc.visx.sdk.adapter.VisxMediationAdapter;
+import com.yoc.visx.sdk.mediation.VISXMediationEventListener;
+import com.yoc.visx.sdk.util.VISXLog;
+
+import java.util.Map;
 
 public class VISXInterstitialGAD implements VisxMediationAdapter {
 
-    private PublisherInterstitialAd publisherInterstitialAd;
+    private static final String AD_UNIT = "adunit";
+    private AdManagerInterstitialAd publisherInterstitialAd;
+    private Context context;
 
     public VISXInterstitialGAD() {
     }
 
     @Override
-    public void loadAd(final String adUnitID, final Context context,
-                       final VISXMediationEventListener eventListener, final List<int[]> adSizes) {
+    public void loadAd(final Map<String, String> parametersMap, final Context context,
+                       final VISXMediationEventListener eventListener) {
 
-        publisherInterstitialAd = new PublisherInterstitialAd(context);
-        publisherInterstitialAd.setAdUnitId(adUnitID);
-        publisherInterstitialAd.loadAd(new PublisherAdRequest.Builder().build());
+        this.context = context;
 
-        publisherInterstitialAd.setAdListener(new AdListener() {
+        AdManagerInterstitialAd.load(context,
+                parametersMap.get(AD_UNIT),
+                new AdManagerAdRequest.Builder().build(),
+                new AdManagerInterstitialAdLoadCallback() {
             @Override
-            public void onAdClosed() {
+            public void onAdLoaded(@NonNull AdManagerInterstitialAd adManagerInterstitialAd) {
+                super.onAdLoaded(adManagerInterstitialAd);
+                eventListener.onAdLoaded();
+                publisherInterstitialAd = adManagerInterstitialAd;
+                interstitialCallbackInit(publisherInterstitialAd);
             }
 
             @Override
-            public void onAdFailedToLoad(int errorCode) {
+            public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
+                super.onAdFailedToLoad(loadAdError);
                 String errorCodeMessage = "";
-                switch (errorCode) {
+                switch (loadAdError.getCode()) {
                     case AdRequest.ERROR_CODE_INTERNAL_ERROR:
                         errorCodeMessage = "ERROR_CODE_INTERNAL_ERROR";
                         break;
@@ -54,32 +69,46 @@ public class VISXInterstitialGAD implements VisxMediationAdapter {
                 eventListener.onAdLoadingFailed(errorCodeMessage);
                 destroy();
             }
+        });
+    }
 
+    private void interstitialCallbackInit(AdManagerInterstitialAd interstitialAd) {
+        interstitialAd.setFullScreenContentCallback(new FullScreenContentCallback() {
             @Override
-            public void onAdLeftApplication() {
-                eventListener.onAdLeftApplication();
+            public void onAdDismissedFullScreenContent() {
+                // Called when fullscreen content is dismissed.
+                VISXLog.w("The ad was dismissed.");
             }
 
             @Override
-            public void onAdLoaded() {
-                eventListener.onAdLoaded();
+            public void onAdFailedToShowFullScreenContent(@NonNull AdError adError) {
+                // Called when fullscreen content failed to show.
+                VISXLog.w("The ad failed to show.");
             }
 
             @Override
-            public void onAdOpened() {
+            public void onAdShowedFullScreenContent() {
+                // Called when fullscreen content is shown.
+                // Make sure to set your reference to null so you don't
+                // show it a second time.
+                publisherInterstitialAd = null;
+                VISXLog.i("TAG", "The ad was shown.");
             }
         });
     }
 
     @Override
     public void show() {
-        publisherInterstitialAd.show();
+        if (publisherInterstitialAd != null && context instanceof Activity) {
+            publisherInterstitialAd.show((Activity) context);
+        } else {
+            VISXLog.w("Google interstitial Ad, in Google as Primary SDK in Mediation, wasn't ready yet.");
+        }
     }
 
     @Override
     public void destroy() {
         if (publisherInterstitialAd != null) {
-            publisherInterstitialAd.setAdListener(null);
             publisherInterstitialAd = null;
         }
     }

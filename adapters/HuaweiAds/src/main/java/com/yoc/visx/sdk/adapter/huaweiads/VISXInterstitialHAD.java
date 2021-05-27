@@ -9,17 +9,19 @@ import com.yoc.visx.sdk.adapter.VisxMediationAdapter;
 import com.yoc.visx.sdk.mediation.VISXMediationEventListener;
 
 import java.util.List;
+import java.util.Map;
 
 public class VISXInterstitialHAD implements VisxMediationAdapter {
+    private static final String AD_UNIT = "adunit";
     private InterstitialAd interstitialAd;
 
     public VISXInterstitialHAD() {
     }
 
     @Override
-    public void loadAd(String adUnitID, Context context, VISXMediationEventListener eventListener, List<int[]> adSizes) {
+    public void loadAd(Map<String, String> parametersMap, Context context, VISXMediationEventListener eventListener) {
         interstitialAd = new InterstitialAd(context);
-        interstitialAd.setAdId(adUnitID);
+        interstitialAd.setAdId(parametersMap.get(AD_UNIT));
         interstitialAd.setAdListener(new AdListener() {
             @Override
             public void onAdFailed(int errorCode) {
