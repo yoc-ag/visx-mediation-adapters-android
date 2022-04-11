@@ -12,9 +12,9 @@ import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.admanager.AdManagerAdRequest;
 import com.google.android.gms.ads.admanager.AdManagerInterstitialAd;
 import com.google.android.gms.ads.admanager.AdManagerInterstitialAdLoadCallback;
-import com.yoc.visx.sdk.adapter.VisxMediationAdapter;
+import com.yoc.visx.sdk.logger.VISXLog;
 import com.yoc.visx.sdk.mediation.VISXMediationEventListener;
-import com.yoc.visx.sdk.util.VISXLog;
+import com.yoc.visx.sdk.mediation.adapter.VisxMediationAdapter;
 
 import java.util.Map;
 
@@ -32,44 +32,59 @@ public class VISXInterstitialGAD implements VisxMediationAdapter {
                        final VISXMediationEventListener eventListener) {
 
         this.context = context;
+        String adUnit = "";
+        if (parametersMap.get(AD_UNIT) != null) {
+            adUnit = parametersMap.remove(AD_UNIT);
+        }
+
+        final AdManagerAdRequest.Builder adRequestBuilder = new AdManagerAdRequest.Builder();
+        if (parametersMap != null) {
+            for (Map.Entry<String, String> entry : parametersMap.entrySet()) {
+                String key = entry.getKey();
+                String value = entry.getValue();
+                adRequestBuilder.addCustomTargeting(key, value);
+            }
+        }
 
         AdManagerInterstitialAd.load(context,
-                parametersMap.get(AD_UNIT),
-                new AdManagerAdRequest.Builder().build(),
+                adUnit,
+                adRequestBuilder.build(),
                 new AdManagerInterstitialAdLoadCallback() {
-            @Override
-            public void onAdLoaded(@NonNull AdManagerInterstitialAd adManagerInterstitialAd) {
-                super.onAdLoaded(adManagerInterstitialAd);
-                eventListener.onAdLoaded();
-                publisherInterstitialAd = adManagerInterstitialAd;
-                interstitialCallbackInit(publisherInterstitialAd);
-            }
+                    @Override
+                    public void onAdLoaded(@NonNull AdManagerInterstitialAd adManagerInterstitialAd) {
+                        super.onAdLoaded(adManagerInterstitialAd);
+                        eventListener.onAdLoaded();
+                        publisherInterstitialAd = adManagerInterstitialAd;
+                        interstitialCallbackInit(publisherInterstitialAd);
+                    }
 
-            @Override
-            public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                super.onAdFailedToLoad(loadAdError);
-                String errorCodeMessage = "";
-                switch (loadAdError.getCode()) {
-                    case AdRequest.ERROR_CODE_INTERNAL_ERROR:
-                        errorCodeMessage = "ERROR_CODE_INTERNAL_ERROR";
-                        break;
-                    case AdRequest.ERROR_CODE_INVALID_REQUEST:
-                        errorCodeMessage = "ERROR_CODE_INVALID_REQUEST";
-                        break;
-                    case AdRequest.ERROR_CODE_NETWORK_ERROR:
-                        errorCodeMessage = "ERROR_CODE_NETWORK_ERROR";
-                        break;
-                    case AdRequest.ERROR_CODE_NO_FILL:
-                        errorCodeMessage = "ERROR_CODE_NO_FILL";
-                        eventListener.initNextMediationAdapter();
-                        break;
-                    default:
-                        errorCodeMessage = "AD FAILED TO LOAD - UNKNOWN ERROR";
-                }
-                eventListener.onAdLoadingFailed(errorCodeMessage);
-                destroy();
-            }
-        });
+                    @Override
+                    public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
+                        super.onAdFailedToLoad(loadAdError);
+
+                        if (loadAdError.getCode() == AdRequest.ERROR_CODE_NO_FILL) {
+                            eventListener.mediationFailWithNoAd();
+                            return;
+                        }
+
+                        String errorCodeMessage = "";
+                        switch (loadAdError.getCode()) {
+                            case AdRequest.ERROR_CODE_INTERNAL_ERROR:
+                                errorCodeMessage = "ERROR_CODE_INTERNAL_ERROR";
+                                break;
+                            case AdRequest.ERROR_CODE_INVALID_REQUEST:
+                                errorCodeMessage = "ERROR_CODE_INVALID_REQUEST";
+                                break;
+                            case AdRequest.ERROR_CODE_NETWORK_ERROR:
+                                errorCodeMessage = "ERROR_CODE_NETWORK_ERROR";
+                                break;
+                            default:
+                                errorCodeMessage = "AD FAILED TO LOAD - UNKNOWN ERROR";
+                        }
+                        eventListener.onAdLoadingFailed(errorCodeMessage, "GAD Interstitial");
+                        destroy();
+                    }
+                });
     }
 
     private void interstitialCallbackInit(AdManagerInterstitialAd interstitialAd) {
