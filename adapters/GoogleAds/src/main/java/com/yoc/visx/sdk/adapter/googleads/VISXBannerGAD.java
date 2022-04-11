@@ -10,8 +10,8 @@ import com.google.android.gms.ads.AdSize;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.admanager.AdManagerAdRequest;
 import com.google.android.gms.ads.admanager.AdManagerAdView;
-import com.yoc.visx.sdk.adapter.VisxMediationAdapter;
 import com.yoc.visx.sdk.mediation.VISXMediationEventListener;
+import com.yoc.visx.sdk.mediation.adapter.VisxMediationAdapter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,10 +43,13 @@ public class VISXBannerGAD implements VisxMediationAdapter {
 
             @Override
             public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
+                super.onAdFailedToLoad(loadAdError);
+
                 if (loadAdError.getCode() == AdRequest.ERROR_CODE_NO_FILL) {
-                    eventListener.initNextMediationAdapter();
+                    eventListener.mediationFailWithNoAd();
                     return;
                 }
+
                 String errorCodeMessage = "";
                 switch (loadAdError.getCode()) {
                     case AdRequest.ERROR_CODE_INTERNAL_ERROR:
@@ -61,7 +64,7 @@ public class VISXBannerGAD implements VisxMediationAdapter {
                     default:
                         errorCodeMessage = "AD FAILED TO LOAD - UNKNOWN ERROR";
                 }
-                eventListener.onAdLoadingFailed(errorCodeMessage);
+                eventListener.onAdLoadingFailed(errorCodeMessage, "GAD Banner");
                 destroy();
             }
 
@@ -77,9 +80,18 @@ public class VISXBannerGAD implements VisxMediationAdapter {
             }
         });
 
-        // Request and load an Ad
-        final AdManagerAdRequest adRequest = new AdManagerAdRequest.Builder().build();
-        adView.loadAd(adRequest);
+        // Request and load an Ad with custom parameters
+        final AdManagerAdRequest.Builder adRequestBuilder = new AdManagerAdRequest.Builder();
+        if (parametersMap != null) {
+            parametersMap.remove(AD_SIZES);
+            parametersMap.remove(AD_UNIT);
+            for (Map.Entry<String, String> entry : parametersMap.entrySet()) {
+                String key = entry.getKey();
+                String value = entry.getValue();
+                adRequestBuilder.addCustomTargeting(key, value);
+            }
+        }
+        adView.loadAd(adRequestBuilder.build());
     }
 
     @Override
