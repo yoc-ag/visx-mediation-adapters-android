@@ -10,10 +10,8 @@ import com.appnexus.opensdk.MediatedInterstitialAdViewController;
 import com.appnexus.opensdk.ResultCode;
 import com.appnexus.opensdk.TargetingParameters;
 import com.yoc.visx.sdk.VisxAdManager;
-import com.yoc.visx.sdk.util.AdSize;
-import com.yoc.visx.sdk.view.category.ActionTracker;
-
-import static com.yoc.visx.sdk.mediation.MediationUtil.TEST_TAG;
+import com.yoc.visx.sdk.adview.tracker.VisxCallbacks;
+import com.yoc.visx.sdk.util.ad.AdSize;
 
 /**
  * The custom adaptor for interstitials must implement Xandr mobile SDK
@@ -23,6 +21,8 @@ import static com.yoc.visx.sdk.mediation.MediationUtil.TEST_TAG;
  */
 @Keep
 public class VISXCustomEventInterstitialXandr implements MediatedInterstitialAdView {
+
+    private static final String TAG = VISXCustomEventInterstitialXandr.class.getSimpleName();
 
     private VisxAdManager visxAdManager;
     MediatedInterstitialAdViewController controller = null;
@@ -40,42 +40,92 @@ public class VISXCustomEventInterstitialXandr implements MediatedInterstitialAdV
                 .setMediation()
                 .customTargetParams(MediationUtil.getCustomTargetingParamsXandr(targetingParameters))
                 .context(activity)
-                .callback(new ActionTracker() {
+                .callback(new VisxCallbacks() {
                     @Override
                     public void onAdRequestStarted(VisxAdManager visxAdManager) {
-                        Log.i(TEST_TAG, "VISXCustomEventInterstitialXandr onAdRequestStarted()");
+                        Log.i(TAG, "onAdRequestStarted()");
                     }
 
                     @Override
                     public void onAdResponseReceived(VisxAdManager visxAdManager, String message) {
-                        Log.i(TEST_TAG, "VISXCustomEventInterstitialXandr onAdResponseReceived()");
+                        Log.i(TAG, "onAdResponseReceived()");
                     }
 
                     @Override
                     public void onAdLoadingStarted(VisxAdManager visxAdManager) {
-                        Log.i(TEST_TAG, "VISXCustomEventInterstitialXandr onAdLoadingStarted()");
+                        Log.i(TAG, "onAdLoadingStarted()");
                     }
 
                     @Override
                     public void onAdLoadingFinished(VisxAdManager visxAdManager, String message) {
-                        Log.i(TEST_TAG, "VISXCustomEventInterstitialXandr onAdLoadingFinished()");
+                        Log.i(TAG, "onAdLoadingFinished()");
                         controller.onAdLoaded();
                     }
 
                     @Override
-                    public void onAdLoadingFailed(VisxAdManager visxAdManager, String message, boolean isFinal) {
-                        Log.i(TEST_TAG, "VISXCustomEventInterstitialXandr onAdLoadingFinished()");
+                    public void onAdLoadingFailed(String message, int errorCode, boolean isFinal) {
+                        Log.i(TAG, "onAdLoadingFailed() ErrorCode: " + errorCode + "Message: " + message + " isFinal: " + isFinal);
                         controller.onAdFailed(ResultCode.getNewInstance(ResultCode.CUSTOM_ADAPTER_ERROR));
                     }
 
                     @Override
+                    public void onAdSizeChanged(int width, int height) {
+                        Log.i(TAG, "onAdSizeChanged()");
+                    }
+
+                    @Override
                     public void onAdClicked() {
-                        Log.i(TEST_TAG, "VISXCustomEventInterstitialXandr onAdClicked()");
+                        Log.i(TAG, "onAdClicked()");
                     }
 
                     @Override
                     public void onAdLeftApplication() {
-                        Log.i(TEST_TAG, "VISXCustomEventInterstitialXandr onAdLeftApplication()");
+                        Log.i(TAG, "onAdLeftApplication()");
+                    }
+
+                    @Override
+                    public void onVideoFinished() {
+                        Log.i(TAG, "onAdLeftApplication()");
+                    }
+
+                    @Override
+                    public void onEffectChange(String effect) {
+                        Log.i(TAG, "onEffectChange() -> effect: " + effect);
+                    }
+
+                    @Override
+                    public void onAdViewable() {
+                        Log.i(TAG, "onAdViewable()");
+                    }
+
+                    @Override
+                    public void onAdResumeApplication() {
+                        Log.i(TAG, "onAdResumeApplication()");
+                    }
+
+                    @Override
+                    public void onAdClosed() {
+                        Log.i(TAG, "onAdClosed()");
+                    }
+
+                    @Override
+                    public void onInterstitialClosed() {
+                        Log.i(TAG, "onInterstitialClosed()");
+                    }
+
+                    @Override
+                    public void onInterstitialWillBeClosed() {
+                        Log.i(TAG, "onInterstitialWillBeClosed()");
+                    }
+
+                    @Override
+                    public void onLandingPageClosed() {
+                        Log.i(TAG, "onLandingPageClosed()");
+                    }
+
+                    @Override
+                    public void onLandingPageOpened(boolean inExternalBrowser) {
+                        Log.i(TAG, "onLandingPageOpened()");
                     }
                 })
                 .build();
@@ -98,34 +148,26 @@ public class VISXCustomEventInterstitialXandr implements MediatedInterstitialAdV
     @Override
     public void destroy() {
         // Called when the mediated SDK's view is no longer being shown.
-        Log.i(TEST_TAG, "VISXCustomEventInterstitialXandr destroy()");
-        if (visxAdManager != null) {
-            visxAdManager.stop();
-        }
+        Log.i(TAG, "destroy()");
+        if (visxAdManager != null) visxAdManager.stop();
     }
 
     @Override
     public void onPause() {
-        Log.i(TEST_TAG, "VISXCustomEventInterstitialXandr onPause()");
-        if (visxAdManager != null) {
-            visxAdManager.pause();
-        }
+        Log.i(TAG, "onPause()");
+        if (visxAdManager != null) visxAdManager.pause();
     }
 
     @Override
     public void onResume() {
-        Log.i(TEST_TAG, "VISXCustomEventInterstitialXandr onResume()");
-        if (visxAdManager != null) {
-            visxAdManager.resume();
-        }
+        Log.i(TAG, "onResume()");
+        if (visxAdManager != null) visxAdManager.resume();
     }
 
     @Override
     public void onDestroy() {
-        Log.i(TEST_TAG, "VISXCustomEventInterstitialXandr onDestroy()");
-        if (visxAdManager != null) {
-            visxAdManager.stop();
-        }
+        Log.i(TAG, "onDestroy()");
+        if (visxAdManager != null) visxAdManager.stop();
     }
 }
 

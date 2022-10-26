@@ -1,49 +1,67 @@
 package com.yoc.visx.sdk.mediation;
 
-import android.app.Activity;
+import static com.yoc.visx.sdk.mediation.MediationUtil.PARAMETER_KEY;
+
 import android.content.Context;
 import android.util.Log;
 
 import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 
-import com.smartadserver.android.library.mediation.SASMediationInterstitialAdapter;
-import com.smartadserver.android.library.mediation.SASMediationInterstitialAdapterListener;
+import com.google.android.gms.ads.AdError;
+import com.google.android.gms.ads.mediation.Adapter;
+import com.google.android.gms.ads.mediation.InitializationCompleteCallback;
+import com.google.android.gms.ads.mediation.MediationAdLoadCallback;
+import com.google.android.gms.ads.mediation.MediationConfiguration;
+import com.google.android.gms.ads.mediation.MediationInterstitialAd;
+import com.google.android.gms.ads.mediation.MediationInterstitialAdCallback;
+import com.google.android.gms.ads.mediation.MediationInterstitialAdConfiguration;
+import com.google.android.gms.ads.mediation.VersionInfo;
 import com.yoc.visx.sdk.VisxAdManager;
 import com.yoc.visx.sdk.adview.tracker.VisxCallbacks;
 
-import java.util.Map;
+import java.util.List;
 
 @Keep
-public class VISXCustomEventInterstitialSAS implements SASMediationInterstitialAdapter {
+public class VISXMediationAdapterInterstitialGAD extends Adapter {
 
-    private static final String TAG = VISXCustomEventInterstitialSAS.class.getSimpleName();
+    private static final String TAG = VISXMediationAdapterInterstitialGAD.class.getSimpleName();
 
-    private VisxAdManager visxAdManager;
-
-    /**
-     * @param context                     the {@link android.content.Context} needed by the mediation SDK to make the ad request
-     * @param serverParametersString      a String containing all needed parameters (as returned by Smart ad delivery)
-     *                                    to make the mediation ad call
-     * @param clientParameters            additional client-side parameters (user specific, like location)
-     * @param interstitialAdapterListener the {@link SASMediationInterstitialAdapterListener} provided to
-     *                                    this {@link com.smartadserver.android.library.mediation.SASMediationAdapter} to notify Smart SDK of events occurring
-     */
     @Override
-    public void requestInterstitialAd(@NonNull final Context context
-            , @NonNull String serverParametersString
-            , @NonNull Map<String, Object> clientParameters
-            , @NonNull final SASMediationInterstitialAdapterListener interstitialAdapterListener) {
+    public void initialize(@NonNull Context context,
+                           @NonNull InitializationCompleteCallback initializationCompleteCallback,
+                           @NonNull List<MediationConfiguration> list) {
+        Log.i(TAG, "initialize()" +
+                " context: " + context +
+                " initializationCompleteCallback: " + initializationCompleteCallback +
+                " List<MediationConfiguration>: " + list);
+    }
 
-        MediationUtil.setParameterMap(serverParametersString);
+    @NonNull
+    @Override
+    public VersionInfo getVersionInfo() {
+        return MediationUtil.getVersionInfo(false);
+    }
 
-        visxAdManager = new VisxAdManager.Builder().context(context)
+    @NonNull
+    @Override
+    public VersionInfo getSDKVersionInfo() {
+        Log.i(TAG, "getSDKVersionInfo()");
+        return MediationUtil.getVersionInfo(true);
+    }
+
+    @Override
+    public void loadInterstitialAd(
+            @NonNull MediationInterstitialAdConfiguration mediationInterstitialAdConfiguration,
+            @NonNull MediationAdLoadCallback<MediationInterstitialAd, MediationInterstitialAdCallback> callback) {
+
+        MediationUtil.setParameterMap(mediationInterstitialAdConfiguration.getServerParameters().get(PARAMETER_KEY).toString());
+        new VisxAdManager.Builder()
                 .visxAdUnitID(MediationUtil.getAuid())
                 .adSize(MediationUtil.getInterstitialAdSize())
                 .appDomain(MediationUtil.getAppDomain())
+                .context(mediationInterstitialAdConfiguration.getContext())
                 .setMediation()
-                .customTargetParams(MediationUtil.getTargetingParamsFromSmartAdServerMap(clientParameters))
-                .context(context)
                 .callback(new VisxCallbacks() {
                     @Override
                     public void onAdRequestStarted(VisxAdManager visxAdManager) {
@@ -57,20 +75,15 @@ public class VISXCustomEventInterstitialSAS implements SASMediationInterstitialA
                     }
 
                     @Override
-                    public void onAdLoadingStarted(VisxAdManager visxAdManager) {
-                        Log.i(TAG, "onAdLoadingStarted()");
-                    }
-
-                    @Override
                     public void onAdLoadingFinished(VisxAdManager visxAdManager, String message) {
-                        Log.i(TAG, "onAdLoadingFinished()");
-                        interstitialAdapterListener.onInterstitialLoaded();
+                        Log.i(TAG, "onAdLoadingFinished() Message: " + message);
+                        callback.onSuccess(context -> visxAdManager.showModalInterstitial());
                     }
 
                     @Override
                     public void onAdLoadingFailed(String message, int errorCode, boolean isFinal) {
                         Log.i(TAG, "onAdLoadingFailed() ErrorCode: " + errorCode + "Message: " + message + " isFinal: " + isFinal);
-                        interstitialAdapterListener.adRequestFailed(message, isFinal);
+                        callback.onFailure(new AdError(errorCode, message, TAG));
                     }
 
                     @Override
@@ -80,24 +93,12 @@ public class VISXCustomEventInterstitialSAS implements SASMediationInterstitialA
 
                     @Override
                     public void onAdClicked() {
-                        ((Activity) context).runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                Log.i(TAG, "onAdClicked()");
-                                interstitialAdapterListener.onAdClicked();
-                            }
-                        });
+                        Log.i(TAG, "onAdClicked()");
                     }
 
                     @Override
                     public void onAdLeftApplication() {
-                        ((Activity) context).runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                Log.i(TAG, "onAdLeftApplication()");
-                                interstitialAdapterListener.onAdClosed();
-                            }
-                        });
+                        Log.i(TAG, "onAdLeftApplication()");
                     }
 
                     @Override
@@ -127,20 +128,17 @@ public class VISXCustomEventInterstitialSAS implements SASMediationInterstitialA
 
                     @Override
                     public void onInterstitialClosed() {
-                        interstitialAdapterListener.onAdClosed();
                         Log.i(TAG, "onInterstitialClosed()");
                     }
 
                     @Override
                     public void onLandingPageOpened(boolean inExternalBrowser) {
                         Log.i(TAG, "onLandingPageOpened()");
-                        interstitialAdapterListener.onAdClosed();
                     }
 
                     @Override
                     public void onLandingPageClosed() {
                         Log.i(TAG, "onLandingPageClosed()");
-                        interstitialAdapterListener.onAdClosed();
                     }
 
                     @Override
@@ -149,15 +147,5 @@ public class VISXCustomEventInterstitialSAS implements SASMediationInterstitialA
                     }
                 })
                 .build();
-    }
-
-    @Override
-    public void showInterstitial() throws Exception {
-        if (visxAdManager != null) visxAdManager.showModalInterstitial();
-    }
-
-    @Override
-    public void onDestroy() {
-        if (visxAdManager != null) visxAdManager.stop();
     }
 }
