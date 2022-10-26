@@ -1,22 +1,19 @@
 package com.yoc.visx.sdk.mediation;
 
-import android.content.Context;
-import android.os.Bundle;
 import android.text.TextUtils;
-import android.util.Log;
 import android.util.Size;
 
 import com.appnexus.opensdk.AdView;
 import com.appnexus.opensdk.TargetingParameters;
-import com.google.android.gms.ads.mediation.MediationAdRequest;
+import com.google.android.gms.ads.mediation.MediationAdLoadCallback;
+import com.google.android.gms.ads.mediation.MediationBannerAdConfiguration;
+import com.google.android.gms.ads.mediation.MediationInterstitialAdConfiguration;
 import com.google.android.gms.ads.mediation.VersionInfo;
-import com.google.android.gms.ads.mediation.customevent.CustomEventBannerListener;
-import com.google.android.gms.ads.mediation.customevent.CustomEventInterstitialListener;
 import com.yoc.visx.sdk.BuildConfig;
 import com.yoc.visx.sdk.VisxAdManager;
-import com.yoc.visx.sdk.util.AdSize;
-import com.yoc.visx.sdk.util.PlacementType;
-import com.yoc.visx.sdk.util.VISXLog;
+import com.yoc.visx.sdk.logger.VISXLog;
+import com.yoc.visx.sdk.util.ad.AdSize;
+import com.yoc.visx.sdk.util.ad.PlacementType;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -29,12 +26,12 @@ final class MediationUtil {
     private MediationUtil() {
     }
 
+    public static final String PARAMETER_KEY = "parameter";
     private static Map<String, String> paramsMap = new HashMap<>();
-    private static com.yoc.visx.sdk.util.AdSize visxAdSize;
+    private static AdSize visxAdSize;
     private static final String AUID_KEY = "auid";
     private static final String APP_DOMAIN_KEY = "app_domain";
     private static final String SIZE_KEY = "size";
-    public static final String TEST_TAG = "--->";
 
     /**
      * Getting the SDK Version from
@@ -45,7 +42,6 @@ final class MediationUtil {
      * @see VersionInfo
      */
     static VersionInfo getVersionInfo(boolean isSDKVersion) {
-        Log.i(TEST_TAG, "MediationUtil getSDKVersionInfo()");
         String versionString = BuildConfig.VERSION_NAME;
         String[] splits = versionString.split("\\.");
 
@@ -67,10 +63,8 @@ final class MediationUtil {
      * @param parameters by splitting the response first by ";" for separating different key <> value pair value
      *                   and then by "=" for splitting key and value strings
      *                   (correct string parameters example: auid=910570;app_domain=yoc.com;size=300x250)
-     * @see VISXCustomEventBannerGMA#requestBannerAd(Context, CustomEventBannerListener, String
-     *, com.google.android.gms.ads.AdSize, MediationAdRequest, Bundle)
-     * @see VISXCustomEventInterstitialGMA#requestInterstitialAd(Context, CustomEventInterstitialListener
-     *, String, MediationAdRequest, Bundle)
+     * @see VISXMediationAdapterBannerGAD#loadBannerAd(MediationBannerAdConfiguration, MediationAdLoadCallback)
+     * @see VISXMediationAdapterInterstitialGAD#loadInterstitialAd(MediationInterstitialAdConfiguration, MediationAdLoadCallback)
      * <p>
      * Creating and populating parameter map with String key <> String value
      * from String
@@ -87,7 +81,7 @@ final class MediationUtil {
                 }
             }
         } else {
-            Log.w(MediationUtil.class.getSimpleName(), "Mediation parameter response null or empty");
+            VISXLog.w(MediationUtil.class.getSimpleName(), "Mediation parameter response null or empty");
         }
     }
 
@@ -184,7 +178,6 @@ final class MediationUtil {
         final HashMap<String, String> customTargetingParams = new HashMap<>();
 
         if (targetingParameters != null) {
-
             if (targetingParameters.getCustomKeywords() != null && !targetingParameters.getCustomKeywords().isEmpty()) {
                 for (int i = 0; i < targetingParameters.getCustomKeywords().size(); i++) {
                     String key = targetingParameters.getCustomKeywords().get(i).first;
@@ -236,13 +229,15 @@ final class MediationUtil {
     /**
      * Smart Ad Server Mapping TargetingParameters Map to our CustomTargetingParameters HashMap
      *
-     * @param clientParameters - Map with String key and String value
+     * @param clientParameters - Map with String key and Object value
      * @return - HashMap resembling SDK type for customTargetingParameters
      */
-    static HashMap<String, String> getTargetingParamsFromSmartAdServerMap(Map<String, String> clientParameters) {
+    static HashMap<String, String> getTargetingParamsFromSmartAdServerMap(Map<String, Object> clientParameters) {
         HashMap<String, String> customTargetParam = new HashMap<>();
-        if (clientParameters instanceof HashMap<?, ?>) {
-            customTargetParam = (HashMap<String, String>) clientParameters;
+        for (Map.Entry<String, Object> entry : clientParameters.entrySet()) {
+            if (entry.getValue() instanceof String) {
+                customTargetParam.put(entry.getKey(), (String) entry.getValue());
+            }
         }
         return customTargetParam;
     }

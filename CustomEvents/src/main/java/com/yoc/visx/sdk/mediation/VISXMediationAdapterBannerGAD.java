@@ -1,51 +1,64 @@
 package com.yoc.visx.sdk.mediation;
 
-import android.app.Activity;
+import static com.yoc.visx.sdk.mediation.MediationUtil.PARAMETER_KEY;
+
+import android.content.Context;
 import android.util.Log;
-import android.util.Size;
-import android.view.View;
 
 import androidx.annotation.Keep;
+import androidx.annotation.NonNull;
 
-import com.appnexus.opensdk.MediatedBannerAdView;
-import com.appnexus.opensdk.MediatedBannerAdViewController;
-import com.appnexus.opensdk.ResultCode;
-import com.appnexus.opensdk.TargetingParameters;
+import com.google.android.gms.ads.AdError;
+import com.google.android.gms.ads.mediation.Adapter;
+import com.google.android.gms.ads.mediation.InitializationCompleteCallback;
+import com.google.android.gms.ads.mediation.MediationAdLoadCallback;
+import com.google.android.gms.ads.mediation.MediationBannerAd;
+import com.google.android.gms.ads.mediation.MediationBannerAdCallback;
+import com.google.android.gms.ads.mediation.MediationBannerAdConfiguration;
+import com.google.android.gms.ads.mediation.MediationConfiguration;
+import com.google.android.gms.ads.mediation.VersionInfo;
 import com.yoc.visx.sdk.VisxAdManager;
 import com.yoc.visx.sdk.adview.tracker.VisxCallbacks;
-import com.yoc.visx.sdk.util.ad.AdSize;
 
-/**
- * The custom adaptor for banners must implement our mobile SDK
- * interface `MediatedBannerAdView`. In this example, the class also
- * implements the `AdListener` interface from the mediated SDK,
- * in order to handle the events from the mediated SDK.
- */
+import java.util.List;
+
 @Keep
-public class VISXCustomEventBannerXandr implements MediatedBannerAdView {
+public class VISXMediationAdapterBannerGAD extends Adapter {
 
-    private static final String TAG = VISXCustomEventBannerXandr.class.getSimpleName();
-
-    private VisxAdManager visxAdManager;
-    private MediatedBannerAdViewController controller;
+    private static final String TAG = VISXMediationAdapterBannerGAD.class.getSimpleName();
 
     @Override
-    public View requestAd(MediatedBannerAdViewController mediatedBannerAdViewController
-            , Activity activity
-            , String parameter
-            , String adId
-            , int width
-            , int height
-            , TargetingParameters targetingParameters) {
+    public void initialize(@NonNull Context context, @NonNull InitializationCompleteCallback initializationCompleteCallback, @NonNull List<MediationConfiguration> list) {
+        Log.i(TAG, "initialize()" +
+                " context: " + context +
+                " initializationCompleteCallback: " + initializationCompleteCallback +
+                " List<MediationConfiguration>: " + list);
+    }
 
-        controller = mediatedBannerAdViewController;
+    @NonNull
+    @Override
+    public VersionInfo getSDKVersionInfo() {
+        return MediationUtil.getVersionInfo(true);
+    }
 
-        visxAdManager = new VisxAdManager.Builder()
-                .visxAdUnitID(adId)
-                .adSize(new AdSize(new Size(width, height)))
+    @NonNull
+    @Override
+    public VersionInfo getVersionInfo() {
+        return MediationUtil.getVersionInfo(false);
+    }
+
+    @Override
+    public void loadBannerAd(
+            @NonNull MediationBannerAdConfiguration mediationBannerAdConfiguration,
+            @NonNull MediationAdLoadCallback<MediationBannerAd, MediationBannerAdCallback> callback) {
+
+        MediationUtil.setParameterMap(mediationBannerAdConfiguration.getServerParameters().get(PARAMETER_KEY).toString());
+        new VisxAdManager.Builder()
+                .visxAdUnitID(MediationUtil.getAuid())
+                .adSize(MediationUtil.getBannerAdSize())
+                .appDomain(MediationUtil.getAppDomain())
                 .setMediation()
-                .customTargetParams(MediationUtil.getCustomTargetingParamsXandr(targetingParameters))
-                .context(activity)
+                .context(mediationBannerAdConfiguration.getContext())
                 .callback(new VisxCallbacks() {
                     @Override
                     public void onAdRequestStarted(VisxAdManager visxAdManager) {
@@ -54,25 +67,20 @@ public class VISXCustomEventBannerXandr implements MediatedBannerAdView {
 
                     @Override
                     public void onAdResponseReceived(VisxAdManager visxAdManager, String message) {
-                        Log.i(TAG, "onAdResponseReceived()");
-                        controller.onAdLoaded();
-                    }
-
-                    @Override
-                    public void onAdLoadingStarted(VisxAdManager visxAdManager) {
-                        Log.i(TAG, "onAdLoadingStarted()");
+                        Log.i(TAG, "onAdResponseReceived() Message: " + message);
+                        callback.onSuccess(visxAdManager::getAdContainer);
                     }
 
                     @Override
                     public void onAdLoadingFinished(VisxAdManager visxAdManager, String message) {
-                        Log.i(TAG, "onAdLoadingFinished()");
+                        Log.i(TAG, "onAdLoadingFinished() Message: " + message);
 
                     }
 
                     @Override
                     public void onAdLoadingFailed(String message, int errorCode, boolean isFinal) {
                         Log.i(TAG, "onAdLoadingFailed() ErrorCode: " + errorCode + "Message: " + message + " isFinal: " + isFinal);
-                        controller.onAdFailed(ResultCode.getNewInstance(ResultCode.CUSTOM_ADAPTER_ERROR));
+                        callback.onFailure(new AdError(errorCode, message, TAG));
                     }
 
                     @Override
@@ -136,31 +144,5 @@ public class VISXCustomEventBannerXandr implements MediatedBannerAdView {
                     }
                 })
                 .build();
-        return visxAdManager.getAdContainer();
-    }
-
-    @Override
-    public void destroy() {
-        // Called when the mediated SDK's view is no longer being shown.
-        Log.i(TAG, "destroy()");
-        if (visxAdManager != null) visxAdManager.stop();
-    }
-
-    @Override
-    public void onPause() {
-        Log.i(TAG, "onPause()");
-        if (visxAdManager != null) visxAdManager.pause();
-    }
-
-    @Override
-    public void onResume() {
-        Log.i(TAG, "onResume()");
-        if (visxAdManager != null) visxAdManager.resume();
-    }
-
-    @Override
-    public void onDestroy() {
-        Log.i(TAG, "onDestroy()");
-        if (visxAdManager != null) visxAdManager.stop();
     }
 }

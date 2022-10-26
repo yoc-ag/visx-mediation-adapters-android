@@ -12,14 +12,14 @@ import androidx.annotation.NonNull;
 import com.smartadserver.android.library.mediation.SASMediationBannerAdapter;
 import com.smartadserver.android.library.mediation.SASMediationBannerAdapterListener;
 import com.yoc.visx.sdk.VisxAdManager;
-import com.yoc.visx.sdk.view.category.ActionTracker;
+import com.yoc.visx.sdk.adview.tracker.VisxCallbacks;
 
 import java.util.Map;
 
-import static com.yoc.visx.sdk.mediation.MediationUtil.TEST_TAG;
-
 @Keep
 public class VISXCustomEventBannerSAS implements SASMediationBannerAdapter {
+
+    private static final String TAG = VISXCustomEventBannerSAS.class.getSimpleName();
 
     private VisxAdManager visxAdManager;
 
@@ -34,7 +34,7 @@ public class VISXCustomEventBannerSAS implements SASMediationBannerAdapter {
     @Override
     public void requestBannerAd(@NonNull final Context context,
                                 @NonNull String serverParametersString,
-                                @NonNull Map<String, String> clientParameters,
+                                @NonNull Map<String, Object> clientParameters,
                                 @NonNull final SASMediationBannerAdapterListener bannerAdapterListener) {
 
         MediationUtil.setParameterMap(serverParametersString);
@@ -46,55 +46,99 @@ public class VISXCustomEventBannerSAS implements SASMediationBannerAdapter {
                 .setMediation()
                 .customTargetParams(MediationUtil.getTargetingParamsFromSmartAdServerMap(clientParameters))
                 .context(context)
-                .callback(new ActionTracker() {
+                .callback(new VisxCallbacks() {
                     @Override
                     public void onAdRequestStarted(VisxAdManager visxAdManager) {
-                        Log.i(TEST_TAG, "VISXCustomEventBannerSAS onAdRequestStarted()");
+                        Log.i(TAG, "onAdRequestStarted()");
                     }
 
                     @Override
                     public void onAdResponseReceived(VisxAdManager visxAdManager, String message) {
-                        Log.i(TEST_TAG, "VISXCustomEventBannerSAS onAdResponseReceived(): " + message);
+                        Log.i(TAG, "onAdResponseReceived(): " + message);
                         bannerAdapterListener.onBannerLoaded(visxAdManager.getAdContainer());
                     }
 
                     @Override
                     public void onAdLoadingStarted(VisxAdManager visxAdManager) {
-                        Log.i(TEST_TAG, "VISXCustomEventBannerSAS onAdLoadingStarted()");
+                        Log.i(TAG, "onAdLoadingStarted()");
                     }
 
                     @Override
                     public void onAdLoadingFinished(final VisxAdManager visxAdManager, String message) {
                         updateAdContainerSize(visxAdManager);
-                        Log.i(TEST_TAG, "VISXCustomEventBannerSAS onAdLoadingFinished()");
+                        Log.i(TAG, "onAdLoadingFinished()");
                     }
 
                     @Override
-                    public void onAdLoadingFailed(VisxAdManager visxAdManager, String message, boolean isFinal) {
-                        Log.i(TEST_TAG, "VISXCustomEventBannerSAS onAdLoadingFinished() - message: " + message + " is final: " + isFinal);
+                    public void onAdLoadingFailed(String message, int errorCode, boolean isFinal) {
+                        Log.i(TAG, "onAdLoadingFailed() ErrorCode: " + errorCode + "Message: " + message + " isFinal: " + isFinal);
                         bannerAdapterListener.adRequestFailed(message, isFinal);
                     }
 
                     @Override
+                    public void onAdSizeChanged(int width, int height) {
+                        Log.i(TAG, "onAdSizeChanged()");
+                    }
+
+                    @Override
                     public void onAdClicked() {
-                        ((Activity) context).runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                Log.i(TEST_TAG, "VISXCustomEventBannerSAS onAdClicked()");
-                                bannerAdapterListener.onAdClicked();
-                            }
+                        ((Activity) context).runOnUiThread(() -> {
+                            Log.i(TAG, "onAdClicked()");
+                            bannerAdapterListener.onAdClicked();
                         });
                     }
 
                     @Override
                     public void onAdLeftApplication() {
-                        ((Activity) context).runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                Log.i(TEST_TAG, "VISXCustomEventBannerSAS onAdLeftApplication()");
-                                bannerAdapterListener.onAdLeftApplication();
-                            }
+                        ((Activity) context).runOnUiThread(() -> {
+                            Log.i(TAG, "onAdLeftApplication()");
+                            bannerAdapterListener.onAdLeftApplication();
                         });
+                    }
+
+                    @Override
+                    public void onVideoFinished() {
+                        Log.i(TAG, "onAdLeftApplication()");
+                    }
+
+                    @Override
+                    public void onEffectChange(String effect) {
+                        Log.i(TAG, "onEffectChange() -> effect: " + effect);
+                    }
+
+                    @Override
+                    public void onAdViewable() {
+                        Log.i(TAG, "onAdViewable()");
+                    }
+
+                    @Override
+                    public void onAdResumeApplication() {
+                        Log.i(TAG, "onAdResumeApplication()");
+                    }
+
+                    @Override
+                    public void onAdClosed() {
+                        Log.i(TAG, "onAdClosed()");
+                    }
+
+                    @Override
+                    public void onInterstitialClosed() {
+                        Log.i(TAG, "onInterstitialClosed()");
+                    }
+
+                    @Override
+                    public void onInterstitialWillBeClosed() {
+                        Log.i(TAG, "onInterstitialWillBeClosed()");
+                    }
+
+                    @Override
+                    public void onLandingPageClosed() {
+                        Log.i(TAG, "onLandingPageClosed()");
+                    }
+
+                    @Override
+                    public void onLandingPageOpened(boolean inExternalBrowser) {
+                        Log.i(TAG, "onLandingPageOpened()");
                     }
                 })
                 .build();
